@@ -1,15 +1,16 @@
-import { join } from 'path';
+import { globby } from 'globby';
 import papaparse from 'papaparse';
-import { writeFileSync } from 'fs';
+import { basename, join } from 'path';
 import { spawn } from 'child_process';
-import { readFile, writeFile } from 'fs/promises';
+import { writeFileSync } from 'fs';
+import { readFile, rename, writeFile } from 'fs/promises';
 import { stringify as stringifyIni, parse as parseIni } from 'ini';
 
 const downloadImages = async (type) => {
   const config = parseIni(await readFile('./downloader/config.ini', 'utf-8'));
 
   return new Promise((resolve, reject) => {
-    config.SETTINGS['Only.Download.Scryfall'] = true;
+    config.SETTINGS['Only.Download.Scryfall'] = false;
     config.SEARCH['Exclude.Fullart'] = true;
     config.FILES['Card.List'] = `cards-${type}.txt`;
     config.FILES['Download.Folder'] = `downloaded/${type}`;
@@ -32,7 +33,7 @@ const downloadImages = async (type) => {
     });
 
     cmd.on('error', reject);
-    cmd.on('exit', resolve);
+    cmd.on('close', resolve);
   });
 };
 
@@ -83,4 +84,19 @@ for (const type of types) {
     'utf-8'
   );
   await downloadImages(type.toLowerCase());
+  await Promise.all(
+    [
+      ...(await globby(
+        `downloader/downloaded/${type.toLowerCase()}/mtgpics/**/*.jpg`
+      )),
+      ...(await globby(
+        `downloader/downloaded/${type.toLowerCase()}/scryfall/**/*.jpg`
+      ))
+    ].map((file) =>
+      rename(
+        file,
+        `./downloader/downloaded/${type.toLowerCase()}/${basename(file)}`
+      )
+    )
+  );
 }
