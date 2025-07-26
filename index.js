@@ -10,6 +10,7 @@ const downloadImages = async (type) => {
 
   return new Promise((resolve, reject) => {
     config.SETTINGS['Only.Download.Scryfall'] = true;
+    config.SEARCH['Exclude.Fullart'] = true;
     config.FILES['Card.List'] = `cards-${type}.txt`;
     config.FILES['Download.Folder'] = `downloaded/${type}`;
 
@@ -64,6 +65,7 @@ for (const type of types) {
       card.isFullArt ||
       card.isOnlineOnly ||
       card.isOversized ||
+      card.isPromo ||
       !card.setCode ||
       card.number.includes('★') ||
       output.includes(card.name) ||
