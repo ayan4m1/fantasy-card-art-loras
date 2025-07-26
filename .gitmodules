@@ -1,0 +1,3 @@
+[submodule "downloader"]
+	path = downloader
+	url = https://github.com/Investigamer/mtg-art-downloader
