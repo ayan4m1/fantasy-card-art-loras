@@ -1,0 +1,30 @@
+{
+  "name": "fantasy-card-art-loras",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Generate download lists for LoRA prep",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ayan4m1/fantasy-card-art-loras.git"
+  },
+  "author": "ayan4m1 <andrew@bulletlogic.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ayan4m1/fantasy-card-art-loras/issues"
+  },
+  "homepage": "https://github.com/ayan4m1/fantasy-card-art-loras#readme",
+  "packageManager": "yarn@4.9.2",
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2"
+  },
+  "dependencies": {
+    "papaparse": "^5.5.3"
+  }
+}
