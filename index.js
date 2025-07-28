@@ -1,10 +1,16 @@
-import { globby } from 'globby';
 import papaparse from 'papaparse';
+import { writeFileSync } from 'fs';
 import { basename, join } from 'path';
 import { spawn } from 'child_process';
-import { writeFileSync } from 'fs';
-import { readFile, rename, writeFile } from 'fs/promises';
+import tf from '@tensorflow/tfjs-node';
+import { globby, globbyStream } from 'globby';
+import { default as Upscaler } from 'upscaler/node';
+import { unlink, readFile, rename, writeFile } from 'fs/promises';
 import { stringify as stringifyIni, parse as parseIni } from 'ini';
+import imageSize from 'image-size';
+import sharp from 'sharp';
+
+sharp.cache(false);
 
 const downloadImages = async (type) => {
   const config = parseIni(await readFile('./downloader/config.ini', 'utf-8'));
@@ -84,14 +90,13 @@ for (const type of types) {
     'utf-8'
   );
   await downloadImages(type.toLowerCase());
+
+  const baseDir = `downloader/downloaded/${type.toLowerCase()}`;
+
   await Promise.all(
     [
-      ...(await globby(
-        `downloader/downloaded/${type.toLowerCase()}/mtgpics/**/*.jpg`
-      )),
-      ...(await globby(
-        `downloader/downloaded/${type.toLowerCase()}/scryfall/**/*.jpg`
-      ))
+      ...(await globby(`${baseDir}/mtgpics/**/*.jpg`)),
+      ...(await globby(`${baseDir}/scryfall/**/*.jpg`))
     ].map((file) =>
       rename(
         file,
@@ -99,4 +104,61 @@ for (const type of types) {
       )
     )
   );
+
+  const upscaler = new Upscaler.default();
+
+  for await (const file of globbyStream(
+    `downloader/downloaded/${type.toLowerCase()}/**/*.jpg`
+  )) {
+    console.log(`Analyzing ${basename(file, '.jpg')}`);
+
+    const sourceBytes = await readFile(file);
+    const { height, width } = imageSize(sourceBytes);
+
+    if (height > width) {
+      console.log('Skipping because aspect ratio is not landscape');
+      await unlink(file);
+      continue;
+    }
+
+    let destBuffer = new Uint8Array();
+
+    try {
+      let newHeight = height,
+        newWidth = width;
+
+      if (height < 600 || width < 600) {
+        newHeight *= 2;
+        newWidth *= 2;
+
+        console.log(`Upscaling by 2x to ${newWidth}x${newHeight}`);
+
+        const sourceImage = tf.node.decodeImage(sourceBytes, 3);
+        const tensor = await upscaler.upscale(sourceImage);
+        destBuffer = await tf.node.encodePng(tensor);
+      }
+
+      const maxWidth = 1200;
+
+      if (newHeight > maxWidth || newWidth > maxWidth) {
+        newHeight = Math.floor(maxWidth / (newWidth / newHeight));
+
+        console.log(`Downscaling to 1200x${newHeight}`);
+
+        if (!destBuffer.length) {
+          destBuffer = sourceBytes;
+        }
+
+        destBuffer = await sharp(destBuffer)
+          .resize(maxWidth, newHeight)
+          .toBuffer();
+      }
+
+      if (destBuffer.length) {
+        await writeFile(file, destBuffer);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
 }

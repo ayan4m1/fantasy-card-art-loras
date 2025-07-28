@@ -17,5 +17,13 @@ cd ..
 node index.js
 ```
 
+Right now instead of just running yarn install, you need to do the following manual node_modules edits:
+
+1. Edit `upscaler` package.json to add an "import" key to the "exports" for "./node" pointing to ESM JS
+2. Edit `@tensorflow/tfjs-node` package.json to add 9 to napi_versions
+3. `NAPI_VERSION=9 npm rebuild @tensorflow/tfjs-node`
+
+**NOTE**: Node 24 will give an error in tensorflow.js about isNullOrUndefined, use Node 22 instead for now.
+
 <!--
 Now the `lists/` directory will contain files you can feed into [this tool](https://github.com/Investigamer/mtg-art-downloader) to get source images. -->
